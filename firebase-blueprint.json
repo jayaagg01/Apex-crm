@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "Lead": {
+      "title": "Lead",
+      "description": "A potential B2B customer or deal in the CRM pipeline.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Contact person name" },
+        "company": { "type": "string", "description": "Company name" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "value": { "type": "number", "description": "Estimated deal value" },
+        "status": {
+          "type": "string",
+          "enum": ["new", "qualified", "proposal", "closed"],
+          "description": "Current stage in the sales pipeline"
+        },
+        "startDate": { "type": "string", "format": "date", "description": "Planned start of service" },
+        "endDate": { "type": "string", "format": "date", "description": "Expected end of service" },
+        "ownerId": { "type": "string", "description": "UID of the assigned sales rep" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "company", "status", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A follow-up action related to a lead.",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string" },
+        "title": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["leadId", "title", "completed", "createdAt"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "Historical notes or meeting logs for a lead.",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["leadId", "content", "authorId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Main collection of CRM leads"
+    },
+    "/leads/{leadId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Task subcollection for a specific lead"
+    },
+    "/leads/{leadId}/notes/{noteId}": {
+      "schema": "Note",
+      "description": "History of notes for a specific lead"
+    }
+  }
+}

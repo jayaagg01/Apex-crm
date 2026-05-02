@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, signInSimple } from './lib/firebase';
-import { LogIn, LogOut, LayoutDashboard, Plus, Users, Settings, ArrowRight, Shield, Zap, Target, AlertCircle } from 'lucide-react';
+import { LogIn, LogOut, LayoutDashboard, Plus, Users, Settings, ArrowRight, Shield, Zap, Target, AlertCircle, Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import Dashboard from './components/Dashboard';
 import PerformanceDashboard from './components/PerformanceDashboard';
@@ -64,6 +64,7 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'pipeline' | 'performance' | 'settings'>('pipeline');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Form states
@@ -281,9 +282,43 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ user, profile, loading }}>
-      <div className="flex h-screen bg-[#08080A] text-slate-300 overflow-hidden">
+      <div className="flex h-screen bg-[#08080A] text-slate-300 overflow-hidden relative">
+        {/* Mobile Header */}
+        <div className="lg:hidden absolute top-0 left-0 right-0 h-16 bg-[#0C0C0E]/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-6 z-40">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <Logo size="sm" />
+            </div>
+            <span className="font-display font-black text-white tracking-[0.2em] text-[10px]">APEX</span>
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 text-slate-400 hover:text-white"
+          >
+            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        {/* Sidebar Overlay */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            />
+          )}
+        </AnimatePresence>
+
         {/* Sidebar */}
-        <aside className="w-64 bg-[#0C0C0E] border-r border-white/5 flex flex-col py-10 shrink-0">
+        <aside className={`
+          fixed lg:static inset-y-0 left-0 z-50
+          w-64 bg-[#0C0C0E] border-r border-white/5 flex flex-col py-10 shrink-0
+          transform transition-transform duration-300 ease-in-out
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}>
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -327,7 +362,10 @@ export default function App() {
                   icon={item.icon} 
                   label={item.label}
                   active={activeView === item.id} 
-                  onClick={() => setActiveView(item.id as any)}
+                  onClick={() => {
+                    setActiveView(item.id as any);
+                    setIsSidebarOpen(false);
+                  }}
                 />
               </motion.div>
             ))}
@@ -350,7 +388,10 @@ export default function App() {
                 icon={<Settings size={18} />} 
                 label="Settings" 
                 active={activeView === 'settings'}
-                onClick={() => setActiveView('settings')}
+                onClick={() => {
+                  setActiveView('settings');
+                  setIsSidebarOpen(false);
+                }}
               />
             </motion.div>
           </nav>
@@ -381,7 +422,7 @@ export default function App() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto bg-[#08080A] relative">
+        <main className="flex-1 overflow-auto bg-[#08080A] relative pt-16 lg:pt-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}

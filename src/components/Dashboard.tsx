@@ -82,39 +82,48 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-8 pb-20">
-      <header className="flex items-center justify-between h-20 border-b border-white/5 px-4 mb-10">
+    <div className="p-4 md:p-8 pb-20">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between border-b border-white/5 py-6 lg:h-20 px-0 lg:px-4 mb-6 lg:mb-10 gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Sales Pipeline</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Sales Pipeline</h1>
           <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold mt-1">Global Enterprise Performance</p>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 lg:gap-6">
           {isSyncing && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full animate-pulse">
+            <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full animate-pulse">
               <RefreshCcw size={12} className="text-emerald-400 animate-spin" />
               <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Helix-Sync Active</span>
             </div>
           )}
-          <div className="relative group">
+          <div className="relative group flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4 group-focus-within:text-indigo-500 transition-colors" />
             <input 
               type="text" 
               placeholder="Filter leads..." 
-              className="pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none w-64 transition-all text-sm text-white placeholder-slate-600"
+              className="pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none w-full lg:w-64 transition-all text-sm text-white placeholder-slate-600"
             />
           </div>
-          <button 
-            onClick={async () => {
-              setIsSyncing(true);
-              await syncLeadsFromGoogleSheet();
-              setIsSyncing(false);
-            }}
-            className="p-2.5 bg-white/5 border border-white/10 text-slate-300 rounded-lg hover:bg-white/10 transition-all"
-            title="Manual System Sync"
-          >
-            <RefreshCcw size={18} className={isSyncing ? 'animate-spin' : ''} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={async () => {
+                setIsSyncing(true);
+                await syncLeadsFromGoogleSheet();
+                setIsSyncing(false);
+              }}
+              className="flex-1 sm:flex-none flex items-center justify-center p-2.5 bg-white/5 border border-white/10 text-slate-300 rounded-lg hover:bg-white/10 transition-all"
+              title="Manual System Sync"
+            >
+              <RefreshCcw size={18} className={isSyncing ? 'animate-spin' : ''} />
+            </button>
+            <button 
+              onClick={() => setIsAddingLead(true)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Plus size={18} />
+              <span className="whitespace-nowrap">New Lead</span>
+            </button>
+          </div>
           <button 
             onClick={() => setIsBulkImporting(true)}
             className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 px-4 py-2.5 rounded-lg font-bold hover:bg-white/10 transition-all font-display text-xs uppercase tracking-widest"
@@ -125,30 +134,23 @@ export default function Dashboard() {
             <Database size={14} className="text-indigo-400" />
             <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Unlimited Cloud Storage Enabled</span>
           </div>
-          <button 
-            onClick={() => setIsAddingLead(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 transition-all hover:-translate-y-0.5 active:translate-y-0"
-          >
-            <Plus size={18} />
-            New Lead
-          </button>
         </div>
       </header>
 
-      <div className="flex flex-nowrap gap-8 overflow-x-auto pb-4 kanban-scroll">
+      <div className="flex flex-nowrap gap-4 md:gap-8 overflow-x-auto pb-4 kanban-scroll -mx-4 px-4 md:mx-0 md:px-0">
         {COLUMNS.map(col => (
-          <div key={col.id} className="flex flex-col gap-6 min-w-[300px] flex-1">
-            <div className="flex justify-between items-center px-2">
-              <span className={`text-[11px] font-bold uppercase tracking-widest ${
+          <div key={col.id} className="flex flex-col gap-4 md:gap-6 min-w-[240px] md:min-w-[300px] flex-1">
+            <div className="flex justify-between items-center px-1">
+              <span className={`text-[9px] md:text-[11px] font-bold uppercase tracking-widest ${
                 col.id === 'new' ? 'text-blue-400' : 
                 col.id === 'qualified' ? 'text-amber-400' :
                 col.id === 'proposal' ? 'text-indigo-400' : 'text-emerald-400'
               }`}>
-                {col.label} ({leads.filter(l => l.status === col.id).length})
+                {col.label} <span className="opacity-50 ml-1">({leads.filter(l => l.status === col.id).length})</span>
               </span>
             </div>
 
-            <div className="kanban-column kanban-scroll overflow-y-auto pr-2">
+            <div className="kanban-column kanban-scroll overflow-y-auto pr-1">
               <AnimatePresence mode="popLayout">
                 {leads.filter(l => l.status === col.id).map(lead => (
                   <motion.div

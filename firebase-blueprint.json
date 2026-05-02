@@ -32,6 +32,8 @@
         "leadId": { "type": "string" },
         "title": { "type": "string" },
         "dueDate": { "type": "string", "format": "date-time" },
+        "reminderEnabled": { "type": "boolean" },
+        "reminderSent": { "type": "boolean" },
         "completed": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -71,6 +73,8 @@
         "googleSheetUrl": { "type": "string" },
         "autoSync": { "type": "boolean" },
         "webhookKey": { "type": "string" },
+        "remindersEnabled": { "type": "boolean" },
+        "reminderAdvanceMinutes": { "type": "number" },
         "ownerId": { "type": "string" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },

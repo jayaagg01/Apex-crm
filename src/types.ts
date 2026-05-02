@@ -22,8 +22,20 @@ export interface Task {
   leadId: string;
   title: string;
   dueDate?: any;
+  reminderEnabled?: boolean;
+  reminderSent?: boolean;
   completed: boolean;
   createdAt: any;
+}
+
+export interface UserSettings {
+  googleSheetUrl: string;
+  autoSync: boolean;
+  webhookKey?: string;
+  remindersEnabled: boolean;
+  reminderAdvanceMinutes: number;
+  ownerId: string;
+  updatedAt: any;
 }
 
 export interface Note {

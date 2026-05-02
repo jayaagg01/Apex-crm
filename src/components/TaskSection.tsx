@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, orderBy, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Task } from '../types';
-import { Plus, CheckCircle2, Circle, Trash2, Calendar } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Trash2, Calendar, Bell, BellOff, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Timestamp } from 'firebase/firestore';
 
 interface TaskSectionProps {
   leadId: string;
@@ -12,6 +13,7 @@ interface TaskSectionProps {
 export default function TaskSection({ leadId }: TaskSectionProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newDueDate, setNewDueDate] = useState('');
 
   useEffect(() => {
     const q = query(
@@ -37,12 +39,26 @@ export default function TaskSection({ leadId }: TaskSectionProps) {
       await addDoc(collection(db, 'leads', leadId, 'tasks'), {
         leadId,
         title: newTaskTitle,
+        dueDate: newDueDate ? Timestamp.fromDate(new Date(newDueDate)) : null,
+        reminderEnabled: !!newDueDate,
+        reminderSent: false,
         completed: false,
         createdAt: serverTimestamp(),
       });
       setNewTaskTitle('');
+      setNewDueDate('');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `leads/${leadId}/tasks`);
+    }
+  };
+
+  const toggleReminder = async (taskId: string, current: boolean) => {
+    try {
+      await updateDoc(doc(db, 'leads', leadId, 'tasks', taskId), {
+        reminderEnabled: !current,
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `leads/${leadId}/tasks/${taskId}`);
     }
   };
 
@@ -66,20 +82,34 @@ export default function TaskSection({ leadId }: TaskSectionProps) {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <form onSubmit={addTask} className="flex gap-2">
-        <input 
-          type="text" 
-          value={newTaskTitle}
-          onChange={e => setNewTaskTitle(e.target.value)}
-          placeholder="New task directive..."
-          className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-xs text-white placeholder-slate-600"
-        />
-        <button 
-          type="submit"
-          className="bg-indigo-600 text-white p-2.5 rounded-lg hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition-all font-bold flex items-center justify-center aspect-square"
-        >
-          <Plus size={18} />
-        </button>
+      <form onSubmit={addTask} className="space-y-3">
+        <div className="flex gap-2">
+          <input 
+            type="text" 
+            value={newTaskTitle}
+            onChange={e => setNewTaskTitle(e.target.value)}
+            placeholder="New task directive..."
+            className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-xs text-white placeholder-slate-600"
+          />
+          <button 
+            type="submit"
+            className="bg-indigo-600 text-white p-2.5 rounded-lg hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition-all font-bold flex items-center justify-center aspect-square"
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Clock size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input 
+              type="datetime-local" 
+              value={newDueDate}
+              onChange={e => setNewDueDate(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg outline-none text-[10px] text-slate-400 focus:border-indigo-500/50 transition-colors"
+            />
+          </div>
+          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest whitespace-nowrap">Schedule Alert</span>
+        </div>
       </form>
 
       <div className="space-y-3">
@@ -108,9 +138,23 @@ export default function TaskSection({ leadId }: TaskSectionProps) {
                 </p>
                 <div className="flex items-center gap-1.5 text-[9px] uppercase font-bold tracking-[0.1em] text-slate-600 mt-0.5">
                   <Calendar size={10} />
-                  {task.createdAt?.toDate?.() ? task.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                  {task.dueDate?.toDate?.() 
+                    ? `Due: ${task.dueDate.toDate().toLocaleString()}` 
+                    : task.createdAt?.toDate?.() 
+                      ? task.createdAt.toDate().toLocaleDateString() 
+                      : 'Just now'}
                 </div>
               </div>
+
+              {task.dueDate && (
+                <button 
+                  onClick={() => toggleReminder(task.id, !!task.reminderEnabled)}
+                  className={`p-2 transition-colors ${task.reminderEnabled ? 'text-indigo-400' : 'text-slate-700 hover:text-slate-500'}`}
+                  title={task.reminderEnabled ? 'Reminder Active' : 'Reminder Disabled'}
+                >
+                  {task.reminderEnabled ? <Bell size={14} /> : <BellOff size={14} />}
+                </button>
+              )}
 
               <button 
                 onClick={() => deleteTask(task.id)}

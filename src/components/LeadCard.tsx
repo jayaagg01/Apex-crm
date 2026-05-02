@@ -1,6 +1,6 @@
 import React from 'react';
 import { Lead } from '../types';
-import { Building2, DollarSign, Clock, ChevronRight } from 'lucide-react';
+import { Building2, Clock, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface LeadCardProps {
@@ -9,12 +9,6 @@ interface LeadCardProps {
 }
 
 export default function LeadCard({ lead, onClick }: LeadCardProps) {
-  const formattedValue = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(lead.value);
-
   return (
     <div
       onClick={onClick}
@@ -29,7 +23,14 @@ export default function LeadCard({ lead, onClick }: LeadCardProps) {
         }`}>
           {lead.status}
         </span>
-        <span className="text-[10px] text-slate-500 font-mono">${(lead.value / 1000).toFixed(0)}k</span>
+        {lead.appointmentCount ? (
+          <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-400 uppercase tracking-tighter bg-indigo-500/5 px-1.5 py-0.5 rounded border border-indigo-500/10">
+            <Clock size={10} />
+            {lead.appointmentCount} Appts
+          </span>
+        ) : (
+          <span className="text-[9px] text-slate-700 uppercase tracking-widest font-bold">No High-Pri</span>
+        )}
       </div>
 
       <div className="space-y-1 mb-4">

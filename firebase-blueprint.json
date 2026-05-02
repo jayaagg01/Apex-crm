@@ -9,7 +9,6 @@
         "company": { "type": "string", "description": "Company name" },
         "email": { "type": "string", "format": "email" },
         "phone": { "type": "string" },
-        "value": { "type": "number", "description": "Estimated deal value" },
         "status": {
           "type": "string",
           "enum": ["new", "qualified", "proposal", "closed"],
@@ -17,6 +16,8 @@
         },
         "startDate": { "type": "string", "format": "date", "description": "Planned start of service" },
         "endDate": { "type": "string", "format": "date", "description": "Expected end of service" },
+        "externalId": { "type": "string", "description": "ID from external systems for syncing" },
+        "appointmentCount": { "type": "number", "description": "Number of scheduled meetings" },
         "ownerId": { "type": "string", "description": "UID of the assigned sales rep" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
@@ -47,6 +48,33 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["leadId", "content", "authorId", "createdAt"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Scheduled meetings or calls with a lead.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "duration": { "type": "number" },
+        "meetLink": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "startTime", "duration", "meetLink", "ownerId", "createdAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "User specific configurations for sync and engine.",
+      "type": "object",
+      "properties": {
+        "googleSheetUrl": { "type": "string" },
+        "autoSync": { "type": "boolean" },
+        "webhookKey": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "updatedAt"]
     }
   },
   "firestore": {
@@ -61,6 +89,14 @@
     "/leads/{leadId}/notes/{noteId}": {
       "schema": "Note",
       "description": "History of notes for a specific lead"
+    },
+    "/leads/{leadId}/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Meetings for a specific lead"
+    },
+    "/settings/{userId}": {
+      "schema": "Settings",
+      "description": "User system configurations"
     }
   }
 }

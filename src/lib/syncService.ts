@@ -57,7 +57,6 @@ export async function syncLeadsFromGoogleSheet() {
                 batch.set(newLeadRef, {
                     name: row.name || 'External Entry',
                     company: row.company || 'Unknown Source',
-                    value: parseFloat(row.value) || 0,
                     email: row.email || '',
                     phone: row.phone || '',
                     status: ['new', 'qualified', 'proposal', 'closed'].includes(status) ? status : 'new',
@@ -73,7 +72,9 @@ export async function syncLeadsFromGoogleSheet() {
           if (newCount > 0) {
             await batch.commit();
             await setDoc(doc(db, 'settings', auth.currentUser!.uid), {
-                lastSync: serverTimestamp()
+                lastSync: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                ownerId: auth.currentUser!.uid
             }, { merge: true });
           }
 

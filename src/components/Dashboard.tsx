@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Lead, LeadStatus } from '../types';
-import { Plus, Search, Filter, MoreHorizontal, DollarSign, Building2, User as UserIcon, Phone, Calendar, RefreshCcw } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Building2, User as UserIcon, Phone, Calendar, RefreshCcw, Mail, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import LeadCard from './LeadCard';
 import LeadProfile from './LeadProfile';
@@ -23,18 +23,22 @@ export default function Dashboard() {
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [isBulkImporting, setIsBulkImporting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [newLeadData, setNewLeadData] = useState({ name: '', company: '', value: 0, phone: '', startDate: '', endDate: '' });
+  const [newLeadData, setNewLeadData] = useState({ name: '', company: '', email: '', phone: '', startDate: '', endDate: '' });
 
   useEffect(() => {
     if (!auth.currentUser) return;
 
     // Trigger Background Sync
     const triggerSync = async () => {
-      const configSnap = await getDoc(doc(db, 'settings', auth.currentUser!.uid));
-      if (configSnap.exists() && configSnap.data().autoSync) {
-        setIsSyncing(true);
-        await syncLeadsFromGoogleSheet();
-        setIsSyncing(false);
+      try {
+        const configSnap = await getDoc(doc(db, 'settings', auth.currentUser!.uid));
+        if (configSnap.exists() && configSnap.data().autoSync) {
+          setIsSyncing(true);
+          await syncLeadsFromGoogleSheet();
+          setIsSyncing(false);
+        }
+      } catch (err) {
+        console.error("Sync Initialization Failed:", err);
       }
     };
     triggerSync();
@@ -66,12 +70,11 @@ export default function Dashboard() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       email: '',
-      phone: '',
     };
 
     try {
       await addDoc(collection(db, 'leads'), leadData);
-      setNewLeadData({ name: '', company: '', value: 0, phone: '', startDate: '', endDate: '' });
+      setNewLeadData({ name: '', company: '', email: '', phone: '', startDate: '', endDate: '' });
       setIsAddingLead(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'leads');
@@ -114,16 +117,20 @@ export default function Dashboard() {
           </button>
           <button 
             onClick={() => setIsBulkImporting(true)}
-            className="flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 px-4 py-2.5 rounded-lg font-bold hover:bg-white/10 transition-all font-display text-xs uppercase tracking-widest"
+            className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 text-slate-300 px-4 py-2.5 rounded-lg font-bold hover:bg-white/10 transition-all font-display text-xs uppercase tracking-widest"
           >
             Import
           </button>
+          <div className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+            <Database size={14} className="text-indigo-400" />
+            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Unlimited Cloud Storage Enabled</span>
+          </div>
           <button 
             onClick={() => setIsAddingLead(true)}
             className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 transition-all hover:-translate-y-0.5 active:translate-y-0"
           >
             <Plus size={18} />
-            New Deal
+            New Lead
           </button>
         </div>
       </header>
@@ -138,9 +145,6 @@ export default function Dashboard() {
                 col.id === 'proposal' ? 'text-indigo-400' : 'text-emerald-400'
               }`}>
                 {col.label} ({leads.filter(l => l.status === col.id).length})
-              </span>
-              <span className="text-[10px] font-mono text-slate-500">
-                ${(leads.filter(l => l.status === col.id).reduce((acc, curr) => acc + curr.value, 0) / 1000).toFixed(1)}k
               </span>
             </div>
 
@@ -177,7 +181,7 @@ export default function Dashboard() {
               className="bg-[#0C0C0E] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-8 max-h-[90vh] overflow-y-auto kanban-scroll">
-                <h3 className="text-2xl font-display font-bold text-white mb-6">Forge New Deal</h3>
+                <h3 className="text-2xl font-display font-bold text-white mb-6">Create New Lead</h3>
                 <form onSubmit={handleAddLead} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
@@ -226,15 +230,15 @@ export default function Dashboard() {
 
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                      <DollarSign size={14} className="text-indigo-500" />
-                      Fiscal Value
+                      <Mail size={14} className="text-indigo-500" />
+                      Email Address
                     </label>
                     <input 
-                      required
-                      type="number" 
-                      value={newLeadData.value}
-                      onChange={e => setNewLeadData(prev => ({ ...prev, value: parseInt(e.target.value) }))}
-                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-sm text-white"
+                      type="email" 
+                      value={newLeadData.email}
+                      onChange={e => setNewLeadData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="e.g. tony@stark.com"
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-sm text-white placeholder-slate-700"
                     />
                   </div>
 

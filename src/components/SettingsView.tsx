@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { Globe, Link as LinkIcon, RefreshCcw, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Globe, Link as LinkIcon, RefreshCcw, ShieldCheck, AlertCircle, Zap, Copy, Check } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function SettingsView() {
-  const [config, setConfig] = useState<{ googleSheetUrl: string; autoSync: boolean }>({
+  const [config, setConfig] = useState<{ googleSheetUrl: string; autoSync: boolean; webhookKey?: string }>({
     googleSheetUrl: '',
-    autoSync: false
+    autoSync: false,
+    webhookKey: ''
   });
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -30,6 +32,28 @@ export default function SettingsView() {
     }
     loadSettings();
   }, []);
+
+  const generateKey = () => {
+    const newKey = 'apex_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    setConfig(prev => ({ ...prev, webhookKey: newKey }));
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const webhookUrl = `${window.location.origin}/api/webhooks/leads`;
+  const curlExample = `curl -X POST ${webhookUrl} \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-KEY: ${config.webhookKey || 'YOUR_KEY'}" \\
+  -d '{
+    "name": "Bruce Wayne",
+    "company": "Wayne Enterprises",
+    "email": "bruce@wayne.com",
+    "status": "new"
+  }'`;
 
   const saveSettings = async () => {
     if (!auth.currentUser) return;
@@ -59,7 +83,65 @@ export default function SettingsView() {
         <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold mt-1">Configure external data conduits</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <section className="space-y-6">
+          <div className="bento-card p-8 rounded-[2rem] space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400">
+                <Zap size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">External Webhooks</h3>
+                <p className="text-xs text-slate-500">Push leads from external systems</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                  X-API-KEY
+                </label>
+                <div className="flex gap-2">
+                  <input 
+                    readOnly
+                    type="text" 
+                    value={config.webhookKey || ''}
+                    placeholder="No key generated"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-mono text-white outline-none"
+                  />
+                  <button 
+                    onClick={generateKey}
+                    className="px-4 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all text-[10px] font-bold uppercase"
+                  >
+                    Generate
+                  </button>
+                </div>
+              </div>
+
+              {config.webhookKey && (
+                <div className="space-y-3">
+                  <div className="p-4 bg-slate-900/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Webhook Endpoint</p>
+                      <button onClick={() => copyToClipboard(webhookUrl)} className="text-indigo-400 hover:text-indigo-300">
+                        {copied ? <Check size={12} /> : <Copy size={12} />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] font-mono text-slate-400 break-all">{webhookUrl}</p>
+                  </div>
+
+                  <div className="p-4 bg-slate-900/50 rounded-xl border border-white/5 space-y-3">
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Implementation Snippet (cURL)</p>
+                    <pre className="text-[9px] font-mono text-indigo-300 bg-black/40 p-3 rounded-lg overflow-x-auto">
+                      {curlExample}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         <section className="space-y-6">
           <div className="bento-card p-8 rounded-[2rem] space-y-6">
             <div className="flex items-center gap-4">

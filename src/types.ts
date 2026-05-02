@@ -6,11 +6,12 @@ export interface Lead {
   company: string;
   email: string;
   phone: string;
-  value: number;
+  value?: number;
   status: LeadStatus;
   startDate?: string;
   endDate?: string;
   externalId?: string;
+  appointmentCount?: number;
   ownerId: string;
   createdAt: any; // ServerTimestamp
   updatedAt: any;

@@ -29,22 +29,26 @@ service cloud.firestore {
 
     // --- Validation Blueprints ---
     function isValidLead(data) {
-      return data.keys().hasAll(['name', 'company', 'status', 'ownerId', 'createdAt', 'updatedAt', 'value']) &&
-             data.keys().size() <= 14 && 
+      return data.keys().hasAll(['name', 'company', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
+             data.keys().size() <= 20 && 
              data.name is string && data.name.size() > 0 &&
              data.company is string && data.company.size() > 0 &&
-             (!data.keys().contains('startDate') || data.startDate is string) &&
-             (!data.keys().contains('endDate') || data.endDate is string) &&
-             (!data.keys().contains('phone') || data.phone is string) &&
+             (!('startDate' in data.keys()) || data.startDate is string) &&
+             (!('endDate' in data.keys()) || data.endDate is string) &&
+             (!('phone' in data.keys()) || data.phone is string) &&
+             (!('externalId' in data.keys()) || data.externalId is string) &&
+             (!('email' in data.keys()) || data.email is string) &&
+             (!('appointmentCount' in data.keys()) || data.appointmentCount is number) &&
+             (!('value' in data.keys()) || data.value is number) &&
              data.status in ['new', 'qualified', 'proposal', 'closed'] &&
              data.ownerId == request.auth.uid &&
-             data.value is number &&
              data.createdAt is timestamp &&
              data.updatedAt is timestamp;
     }
 
     function isValidTask(data) {
       return data.keys().hasAll(['leadId', 'title', 'completed', 'createdAt']) &&
+             data.keys().size() <= 10 &&
              data.leadId is string &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.completed is bool &&
@@ -53,10 +57,33 @@ service cloud.firestore {
 
     function isValidNote(data) {
       return data.keys().hasAll(['leadId', 'content', 'authorId', 'createdAt']) &&
+             data.keys().size() <= 10 &&
              data.leadId is string &&
              data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
              data.authorId == request.auth.uid &&
              data.createdAt is timestamp;
+    }
+
+    function isValidAppointment(data) {
+      return data.keys().hasAll(['title', 'startTime', 'duration', 'meetLink', 'ownerId', 'createdAt']) &&
+             data.keys().size() <= 10 &&
+             data.title is string &&
+             data.startTime is string &&
+             data.duration is number &&
+             data.meetLink is string &&
+             data.ownerId == request.auth.uid &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['ownerId', 'updatedAt']) &&
+             data.keys().size() <= 12 &&
+             data.ownerId == request.auth.uid &&
+             (!('googleSheetUrl' in data.keys()) || data.googleSheetUrl is string) &&
+             (!('autoSync' in data.keys()) || data.autoSync is bool) &&
+             (!('webhookKey' in data.keys()) || data.webhookKey is string) &&
+             (!('lastSync' in data.keys()) || data.lastSync is timestamp) &&
+             data.updatedAt is timestamp;
     }
 
     // --- Collections ---
@@ -90,6 +117,18 @@ service cloud.firestore {
                     get(/databases/$(database)/documents/leads/$(leadId)).data.ownerId == request.auth.uid &&
                     isValidNote(incoming());
       }
+
+      match /appointments/{appointmentId} {
+        allow read: if isSignedIn() && get(/databases/$(database)/documents/leads/$(leadId)).data.ownerId == request.auth.uid;
+        allow write: if isSignedIn() && 
+                    get(/databases/$(database)/documents/leads/$(leadId)).data.ownerId == request.auth.uid &&
+                    isValidAppointment(incoming());
+      }
+    }
+
+    match /settings/{userId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow write: if isSignedIn() && isOwner(userId) && isValidSettings(incoming());
     }
   }
 }

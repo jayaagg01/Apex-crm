@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Appointment } from '../types';
 import { Calendar, Clock, Video, Plus, ExternalLink, Loader2 } from 'lucide-react';
@@ -48,7 +48,7 @@ export default function AppointmentSection({ leadId, leadName }: AppointmentSect
     const endDate = new Date(startDate.getTime() + newMeeting.duration * 60000);
     
     const fmt = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g, '');
-    const meetLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(newMeeting.title)}&dates=${fmt(startDate)}/${fmt(endDate)}&details=${encodeURIComponent('CRM Generated Meeting Link')}&add=meet`;
+    const meetLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(newMeeting.title)}&dates=${fmt(startDate)}/${fmt(endDate)}&details=${encodeURIComponent('CRM Generated Meeting Link')}&add=meet&sf=true&output=xml`;
 
     try {
       await addDoc(collection(db, 'leads', leadId, 'appointments'), {
@@ -59,6 +59,14 @@ export default function AppointmentSection({ leadId, leadName }: AppointmentSect
         ownerId: auth.currentUser.uid,
         createdAt: serverTimestamp()
       });
+
+      // Increment appointment count on lead
+      const leadRef = doc(db, 'leads', leadId);
+      const leadSnap = await getDoc(leadRef);
+      if (leadSnap.exists()) {
+        const currentCount = leadSnap.data().appointmentCount || 0;
+        await updateDoc(leadRef, { appointmentCount: currentCount + 1, updatedAt: serverTimestamp() });
+      }
       
       // Open the calendar invite in a new tab to finish "automatic" booking
       window.open(meetLink, '_blank');

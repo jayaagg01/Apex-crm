@@ -57,7 +57,6 @@ export default function BulkImport({ onClose }: BulkImportProps) {
         batch.set(newLeadRef, {
           name: row.name || 'Unknown Contact',
           company: row.company || 'Unknown Enterprise',
-          value: parseFloat(row.value) || 0,
           email: row.email || '',
           phone: row.phone || '',
           startDate: row.startDate || '',
@@ -110,7 +109,7 @@ export default function BulkImport({ onClose }: BulkImportProps) {
               </div>
               <h4 className="text-lg font-bold text-white mb-2">Upload CSV Manifest</h4>
               <p className="text-sm text-slate-500 max-w-xs mx-auto">
-                Select your lead database export. Required columns: <span className="text-slate-300">name, company, value</span>.
+                Select your lead database export. Required columns: <span className="text-slate-300">name, company</span>.
               </p>
               <input 
                 type="file" 
@@ -140,7 +139,6 @@ export default function BulkImport({ onClose }: BulkImportProps) {
                     <tr>
                       <th className="px-4 py-3 border-b border-white/5">Name</th>
                       <th className="px-4 py-3 border-b border-white/5">Entity</th>
-                      <th className="px-4 py-3 border-b border-white/5">Valuation</th>
                       <th className="px-4 py-3 border-b border-white/5">Status</th>
                     </tr>
                   </thead>
@@ -149,7 +147,6 @@ export default function BulkImport({ onClose }: BulkImportProps) {
                       <tr key={i} className="hover:bg-white/5 transition-colors">
                         <td className="px-4 py-3 border-b border-white/5 whitespace-nowrap">{row.name}</td>
                         <td className="px-4 py-3 border-b border-white/5 whitespace-nowrap">{row.company}</td>
-                        <td className="px-4 py-3 border-b border-white/5 whitespace-nowrap text-emerald-400 font-bold">${row.value}</td>
                         <td className="px-4 py-3 border-b border-white/5 uppercase tracking-widest opacity-60">{row.status || 'new'}</td>
                       </tr>
                     ))}

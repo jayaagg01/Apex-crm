@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lead, LeadStatus } from '../types';
-import { X, Building2, User, Mail, Phone, DollarSign, Calendar, CheckCircle2, MessageSquare, History, ArrowRight } from 'lucide-react';
+import { X, Building2, User, Mail, Phone, Calendar, CheckCircle2, MessageSquare, History, ArrowRight, Database } from 'lucide-react';
 import { motion } from 'motion/react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -15,6 +15,15 @@ interface LeadProfileProps {
 
 export default function LeadProfile({ lead, onClose }: LeadProfileProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'tasks' | 'notes' | 'meetings'>('details');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedLead, setEditedLead] = useState({
+    name: lead.name,
+    company: lead.company,
+    email: lead.email || '',
+    phone: lead.phone || '',
+    startDate: lead.startDate || '',
+    endDate: lead.endDate || '',
+  });
 
   const updateStatus = async (newStatus: LeadStatus) => {
     try {
@@ -22,6 +31,18 @@ export default function LeadProfile({ lead, onClose }: LeadProfileProps) {
         status: newStatus,
         updatedAt: serverTimestamp(),
       });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `leads/${lead.id}`);
+    }
+  };
+
+  const saveChanges = async () => {
+    try {
+      await updateDoc(doc(db, 'leads', lead.id), {
+        ...editedLead,
+        updatedAt: serverTimestamp(),
+      });
+      setIsEditing(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `leads/${lead.id}`);
     }
@@ -62,14 +83,14 @@ export default function LeadProfile({ lead, onClose }: LeadProfileProps) {
           
           <div className="flex gap-3 mt-8">
              <div className="flex-1 bento-card p-3 rounded-xl text-center">
-               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Deal Size</p>
-               <p className="text-lg font-bold text-emerald-400">${(lead.value/1000).toFixed(0)}k</p>
-             </div>
-             <div className="flex-1 bento-card p-3 rounded-xl text-center">
                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Status</p>
                <p className={`text-lg font-bold uppercase ${
                  lead.status === 'closed' ? 'text-indigo-400' : 'text-amber-400'
                }`}>{lead.status}</p>
+             </div>
+             <div className="flex-1 bento-card p-3 rounded-xl text-center">
+               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Meetings</p>
+               <p className="text-lg font-bold text-indigo-400">{lead.appointmentCount || 0}</p>
              </div>
           </div>
         </div>
@@ -103,45 +124,137 @@ export default function LeadProfile({ lead, onClose }: LeadProfileProps) {
           {activeTab === 'details' && (
             <div className="space-y-8 animate-in fade-in duration-500">
               <section className="space-y-6">
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Contact Intelligence</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Contact Intelligence</h3>
+                  <button 
+                    onClick={() => isEditing ? saveChanges() : setIsEditing(true)}
+                    className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-colors"
+                  >
+                    {isEditing ? 'Save Details' : 'Edit Details'}
+                  </button>
+                </div>
+                
                 <div className="space-y-4">
+                  <div className="bento-card p-4 rounded-xl flex items-center gap-4">
+                    <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center text-indigo-400">
+                      <User size={18} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Full Name</p>
+                      {isEditing ? (
+                        <input 
+                          type="text" 
+                          value={editedLead.name}
+                          onChange={e => setEditedLead(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      ) : (
+                        <p className="text-sm font-medium text-slate-200">{lead.name}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bento-card p-4 rounded-xl flex items-center gap-4">
+                    <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center text-indigo-400">
+                      <Building2 size={18} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Corporation</p>
+                      {isEditing ? (
+                        <input 
+                          type="text" 
+                          value={editedLead.company}
+                          onChange={e => setEditedLead(prev => ({ ...prev, company: e.target.value }))}
+                          className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      ) : (
+                        <p className="text-sm font-medium text-slate-200">{lead.company}</p>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="bento-card p-4 rounded-xl flex items-center gap-4">
                     <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center text-indigo-400">
                       <Mail size={18} />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Signal Source</p>
-                      <p className="text-sm font-medium text-slate-200">{lead.email || 'direct@enterprise.com'}</p>
+                      {isEditing ? (
+                        <input 
+                          type="email" 
+                          value={editedLead.email}
+                          onChange={e => setEditedLead(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      ) : (
+                        <p className="text-sm font-medium text-slate-200">{lead.email || 'direct@enterprise.com'}</p>
+                      )}
                     </div>
                   </div>
                   <div className="bento-card p-4 rounded-xl flex items-center gap-4">
                     <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center text-indigo-400">
                       <Phone size={18} />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Comm Line</p>
-                      <p className="text-sm font-medium text-slate-200">{lead.phone || '+1 (555) 789-2024'}</p>
+                      {isEditing ? (
+                        <input 
+                          type="text" 
+                          value={editedLead.phone}
+                          onChange={e => setEditedLead(prev => ({ ...prev, phone: e.target.value }))}
+                          className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      ) : (
+                        <p className="text-sm font-medium text-slate-200">{lead.phone || '+1 (555) 789-2024'}</p>
+                      )}
                     </div>
                   </div>
                 </div>
               </section>
 
               {/* Service Period */}
-              {(lead.startDate || lead.endDate) && (
-                <section className="space-y-4">
-                  <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Service Lifecycle</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bento-card p-4 rounded-xl">
-                      <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Activation</p>
+              <section className="space-y-4">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Service Lifecycle</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bento-card p-4 rounded-xl">
+                    <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Activation</p>
+                    {isEditing ? (
+                      <input 
+                        type="date" 
+                        value={editedLead.startDate}
+                        onChange={e => setEditedLead(prev => ({ ...prev, startDate: e.target.value }))}
+                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-[10px] text-white outline-none focus:ring-1 focus:ring-indigo-500 [color-scheme:dark]"
+                      />
+                    ) : (
                       <p className="text-sm font-medium text-slate-200">{lead.startDate || 'TBD'}</p>
-                    </div>
-                    <div className="bento-card p-4 rounded-xl">
-                      <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Termination</p>
-                      <p className="text-sm font-medium text-slate-200">{lead.endDate || 'TBD'}</p>
-                    </div>
+                    )}
                   </div>
-                </section>
-              )}
+                  <div className="bento-card p-4 rounded-xl">
+                    <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Termination</p>
+                    {isEditing ? (
+                      <input 
+                        type="date" 
+                        value={editedLead.endDate}
+                        onChange={e => setEditedLead(prev => ({ ...prev, endDate: e.target.value }))}
+                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-[10px] text-white outline-none focus:ring-1 focus:ring-indigo-500 [color-scheme:dark]"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium text-slate-200">{lead.endDate || 'TBD'}</p>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Record Integrity</h3>
+                <div className="bento-card p-4 rounded-xl flex items-center gap-4 bg-indigo-500/5 border border-indigo-500/10">
+                  <Database size={18} className="text-indigo-400" />
+                  <div>
+                    <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest leading-none mb-1">Unlimited Cloud Scale</p>
+                    <p className="text-[9px] text-slate-600 font-medium">Atomic persistence with auto-scaling storage architecture</p>
+                  </div>
+                </div>
+              </section>
 
               <section className="space-y-4">
                 <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Phase Transition</h3>

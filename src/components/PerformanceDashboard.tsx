@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area 
 } from 'recharts';
-import { TrendingUp, DollarSign, Target, Briefcase, Zap, Download, Filter } from 'lucide-react';
+import { TrendingUp, Target, Briefcase, Zap, Download, Filter, ShieldCheck, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import Papa from 'papaparse';
 
@@ -46,34 +46,29 @@ export default function PerformanceDashboard() {
   }, [leads, dateRange]);
 
   const stats = useMemo(() => {
-    const totalValue = filteredLeads.reduce((acc, curr) => acc + curr.value, 0);
-    const wonLeads = filteredLeads.filter(l => l.status === 'closed');
-    const wonValue = wonLeads.reduce((acc, curr) => acc + curr.value, 0);
-    const conversionRate = filteredLeads.length > 0 ? (wonLeads.length / filteredLeads.length) * 100 : 0;
-    const avgDealSize = filteredLeads.length > 0 ? totalValue / filteredLeads.length : 0;
+    const totalLeads = filteredLeads.length;
+    const newLeads = filteredLeads.filter(l => l.status === 'new').length;
+    const qualifiedLeads = filteredLeads.filter(l => l.status === 'qualified').length;
+    const proposalLeads = filteredLeads.filter(l => l.status === 'proposal').length;
+    const closedLeads = filteredLeads.filter(l => l.status === 'closed').length;
+    const totalAppointments = filteredLeads.reduce((acc, curr) => acc + (curr.appointmentCount || 0), 0);
+    
+    const conversionRate = totalLeads > 0 ? (closedLeads / totalLeads) * 100 : 0;
 
     const stageData = [
-      { name: 'New', value: filteredLeads.filter(l => l.status === 'new').length, color: '#60A5FA' },
-      { name: 'Qualified', value: filteredLeads.filter(l => l.status === 'qualified').length, color: '#FBBF24' },
-      { name: 'Proposal', value: filteredLeads.filter(l => l.status === 'proposal').length, color: '#818CF8' },
-      { name: 'Won', value: filteredLeads.filter(l => l.status === 'closed').length, color: '#10B981' },
+      { name: 'New', value: newLeads, color: '#60A5FA' },
+      { name: 'Qualified', value: qualifiedLeads, color: '#FBBF24' },
+      { name: 'Proposal', value: proposalLeads, color: '#818CF8' },
+      { name: 'Won', value: closedLeads, color: '#10B981' },
     ];
 
-    const valueByStage = [
-      { stage: 'New', amount: filteredLeads.filter(l => l.status === 'new').reduce((a, c) => a + c.value, 0) },
-      { stage: 'Qual', amount: filteredLeads.filter(l => l.status === 'qualified').reduce((a, c) => a + c.value, 0) },
-      { stage: 'Prop', amount: filteredLeads.filter(l => l.status === 'proposal').reduce((a, c) => a + c.value, 0) },
-      { stage: 'Won', amount: filteredLeads.filter(l => l.status === 'closed').reduce((a, c) => a + c.value, 0) },
-    ];
-
-    return { totalValue, wonValue, conversionRate, avgDealSize, stageData, valueByStage };
+    return { totalLeads, newLeads, qualifiedLeads, proposalLeads, closedLeads, totalAppointments, conversionRate, stageData };
   }, [filteredLeads]);
 
   const exportData = () => {
     const csvData = filteredLeads.map(l => ({
       Name: l.name,
       Company: l.company,
-      Value: l.value,
       Status: l.status,
       Created: l.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A'
     }));
@@ -83,7 +78,7 @@ export default function PerformanceDashboard() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Performance_Report_${dateRange.start}_to_${dateRange.end}.csv`);
+    link.setAttribute('download', `Lead_Report_${dateRange.start}_to_${dateRange.end}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -94,8 +89,8 @@ export default function PerformanceDashboard() {
     <div className="p-8 pb-20 space-y-10 animate-in fade-in duration-700">
       <header className="border-b border-white/5 pb-8 mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Performance Intel</h1>
-          <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold mt-1">Real-time Revenue Telemetry</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Lead Intelligence</h1>
+          <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold mt-1">Real-time Pipeline Telemetry</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-4">
@@ -126,53 +121,70 @@ export default function PerformanceDashboard() {
 
           <div className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl">
             <Zap size={14} className="text-indigo-400" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Leads: {filteredLeads.length}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tracking: {stats.totalLeads} Records</span>
           </div>
         </div>
       </header>
 
       {/* KPI Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard 
-          icon={<DollarSign size={20} className="text-emerald-400" />} 
-          label="Total Pipeline" 
-          value={`$${(stats.totalValue / 1000).toFixed(1)}k`} 
-          subValue="Gross Asset Value"
+          icon={<Briefcase size={16} className="text-blue-400" />} 
+          label="Total Leads" 
+          value={stats.totalLeads.toString()} 
+          subValue="Gross Database"
         />
         <StatCard 
-          icon={<Target size={20} className="text-indigo-400" />} 
-          label="Conversion" 
+          icon={<Zap size={16} className="text-emerald-400" />} 
+          label="New" 
+          value={stats.newLeads.toString()} 
+          subValue="Incoming Fresh"
+        />
+        <StatCard 
+          icon={<Target size={16} className="text-yellow-400" />} 
+          label="Qualified" 
+          value={stats.qualifiedLeads.toString()} 
+          subValue="Vetted Opps"
+        />
+        <StatCard 
+          icon={<TrendingUp size={16} className="text-indigo-400" />} 
+          label="Proposal" 
+          value={stats.proposalLeads.toString()} 
+          subValue="Active Bids"
+        />
+        <StatCard 
+          icon={<ShieldCheck size={16} className="text-emerald-500" />} 
+          label="Closed" 
+          value={stats.closedLeads.toString()} 
+          subValue="Successful Wins"
+        />
+        <StatCard 
+          icon={<Calendar size={16} className="text-pink-400" />} 
+          label="Meetings" 
+          value={stats.totalAppointments.toString()} 
+          subValue="Total Bookings"
+        />
+        <StatCard 
+          icon={<Target size={16} className="text-purple-400" />} 
+          label="Win Rate" 
           value={`${stats.conversionRate.toFixed(1)}%`} 
-          subValue="Win Opportunity Rate"
-        />
-        <StatCard 
-          icon={<Briefcase size={20} className="text-blue-400" />} 
-          label="Avg Ticket" 
-          value={`$${(stats.avgDealSize / 1000).toFixed(1)}k`} 
-          subValue="Mean Unit Valuation"
-        />
-        <StatCard 
-          icon={<TrendingUp size={20} className="text-purple-400" />} 
-          label="Won Revenue" 
-          value={`$${(stats.wonValue / 1000).toFixed(1)}k`} 
-          subValue="Confirmed Liquid Assets"
+          subValue="Efficiency"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Stage Distribution */}
-        <div className="lg:col-span-1 bento-card p-6 rounded-2xl flex flex-col">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-8">Pipeline Volume</h3>
-          <div className="flex-1 min-h-[300px]">
+        <div className="lg:col-span-3 bento-card p-8 rounded-3xl flex flex-col items-center lg:flex-row gap-12">
+          <div className="w-full max-w-[300px] h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={stats.stageData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
+                  innerRadius={80}
+                  outerRadius={120}
+                  paddingAngle={8}
                   dataKey="value"
                 >
                   {stats.stageData.map((entry, index) => (
@@ -180,57 +192,23 @@ export default function PerformanceDashboard() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0C0C0E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#0C0C0E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                   itemStyle={{ color: '#fff', fontSize: '12px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          
+          <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-4 gap-6">
             {stats.stageData.map((s) => (
-              <div key={s.name} className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">{s.name}</span>
-                <span className="text-xs font-bold text-white ml-auto">{s.value}</span>
+              <div key={s.name} className="bento-card p-6 rounded-2xl flex flex-col items-center justify-center text-center space-y-2 border-t-2" style={{ borderTopColor: s.color }}>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{s.name}</p>
+                <p className="text-3xl font-black text-white">{s.value}</p>
+                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-tighter">
+                  {stats.totalLeads > 0 ? ((s.value / stats.totalLeads) * 100).toFixed(0) : 0}% Distribution
+                </p>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Revenue Velocity */}
-        <div className="lg:col-span-2 bento-card p-6 rounded-2xl">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-8">Revenue Concentration by Phase</h3>
-          <div className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.valueByStage}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis 
-                  dataKey="stage" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748b', fontSize: 10 }}
-                  tickFormatter={(val) => `$${val/1000}k`}
-                />
-                <Tooltip 
-                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  contentStyle={{ backgroundColor: '#0C0C0E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                  labelStyle={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', marginBottom: '4px' }}
-                  itemStyle={{ color: '#fff', fontSize: '14px', fontWeight: 'bold' }}
-                  formatter={(value: number) => [`$${value.toLocaleString()}`, 'Valuation']}
-                />
-                <Bar 
-                  dataKey="amount" 
-                  fill="#6366f1" 
-                  radius={[8, 8, 0, 0]} 
-                  barSize={40}
-                />
-              </BarChart>
-            </ResponsiveContainer>
           </div>
         </div>
       </div>
@@ -241,20 +219,20 @@ export default function PerformanceDashboard() {
 function StatCard({ icon, label, value, subValue }: { icon: React.ReactNode; label: string; value: string; subValue: string }) {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bento-card p-6 rounded-2xl border-l-4 border-l-indigo-600"
+      className="bento-card p-5 rounded-2xl border-l-2 border-l-indigo-600/30 hover:border-l-indigo-500 transition-all"
     >
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/5 shadow-inner">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center border border-white/5">
           {icon}
         </div>
-        <div>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</p>
-          <p className="text-[9px] text-slate-700 uppercase tracking-tighter mt-0.5">{subValue}</p>
-        </div>
+        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">{label}</p>
       </div>
-      <p className="text-3xl font-display font-black text-white">{value}</p>
+      <div className="flex flex-col">
+        <p className="text-2xl font-black text-white leading-none">{value}</p>
+        <p className="text-[8px] text-slate-700 uppercase tracking-tighter mt-1">{subValue}</p>
+      </div>
     </motion.div>
   );
 }

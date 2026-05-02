@@ -1,23 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { Globe, Link as LinkIcon, RefreshCcw, ShieldCheck, AlertCircle, Zap, Copy, Check, Bell } from 'lucide-react';
+import { Globe, Link as LinkIcon, RefreshCcw, ShieldCheck, AlertCircle, Zap, Copy, Check } from 'lucide-react';
 import { motion } from 'motion/react';
-import { notificationService } from '../lib/notificationService';
 
 export default function SettingsView() {
-  const [config, setConfig] = useState<{ 
-    googleSheetUrl: string; 
-    autoSync: boolean; 
-    webhookKey?: string;
-    remindersEnabled: boolean;
-    reminderAdvanceMinutes: number;
-  }>({
+  const [config, setConfig] = useState<{ googleSheetUrl: string; autoSync: boolean; webhookKey?: string }>({
     googleSheetUrl: '',
     autoSync: false,
-    webhookKey: '',
-    remindersEnabled: false,
-    reminderAdvanceMinutes: 15
+    webhookKey: ''
   });
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -80,15 +71,6 @@ export default function SettingsView() {
       setMessage({ type: 'error', text: 'Transmission Failure: Check Permissions' });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleRequestPermission = async () => {
-    const granted = await notificationService.requestPermission();
-    if (!granted) {
-      setMessage({ type: 'error', text: 'Notification Permission Denied by Browser' });
-    } else {
-      setMessage({ type: 'success', text: 'System Notifications Authorized' });
     }
   };
 
@@ -218,58 +200,6 @@ export default function SettingsView() {
                 {message.text}
               </div>
             )}
-          </div>
-        </section>
-
-        <section className="space-y-6">
-          <div className="bento-card p-8 rounded-[2rem] space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400">
-                <Bell size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Task Reminders</h3>
-                <p className="text-xs text-slate-500">Intelligent push notification alerts</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <button 
-                onClick={handleRequestPermission}
-                className="w-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500/20 transition-all"
-              >
-                Request Browser Authorization
-              </button>
-
-              <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
-                <div>
-                  <p className="text-xs font-bold text-slate-200">Push Alerts</p>
-                  <p className="text-[10px] text-slate-500">Notify me when tasks are due</p>
-                </div>
-                <button 
-                  onClick={() => setConfig(prev => ({ ...prev, remindersEnabled: !prev.remindersEnabled }))}
-                  className={`w-12 h-6 rounded-full p-1 transition-all ${config.remindersEnabled ? 'bg-indigo-500' : 'bg-slate-800'}`}
-                >
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${config.remindersEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center justify-between">
-                  Advance Warning (Minutes)
-                  <span className="text-indigo-400">{config.reminderAdvanceMinutes}m</span>
-                </label>
-                <input 
-                  type="range" 
-                  min="5"
-                  max="120"
-                  step="5"
-                  value={config.reminderAdvanceMinutes}
-                  onChange={e => setConfig(prev => ({ ...prev, reminderAdvanceMinutes: parseInt(e.target.value) }))}
-                  className="w-full accent-indigo-500 bg-white/5 h-1.5 rounded-full appearance-none cursor-pointer"
-                />
-              </div>
-            </div>
           </div>
         </section>
 

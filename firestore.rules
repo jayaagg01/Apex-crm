@@ -48,13 +48,10 @@ service cloud.firestore {
 
     function isValidTask(data) {
       return data.keys().hasAll(['leadId', 'title', 'completed', 'createdAt']) &&
-             data.keys().size() <= 12 &&
+             data.keys().size() <= 10 &&
              data.leadId is string &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.completed is bool &&
-             (!('dueDate' in data.keys()) || data.dueDate is timestamp) &&
-             (!('reminderEnabled' in data.keys()) || data.reminderEnabled is bool) &&
-             (!('reminderSent' in data.keys()) || data.reminderSent is bool) &&
              data.createdAt is timestamp;
     }
 
@@ -80,14 +77,12 @@ service cloud.firestore {
 
     function isValidSettings(data) {
       return data.keys().hasAll(['ownerId', 'updatedAt']) &&
-             data.keys().size() <= 14 &&
+             data.keys().size() <= 12 &&
              data.ownerId == request.auth.uid &&
              (!('googleSheetUrl' in data.keys()) || data.googleSheetUrl is string) &&
              (!('autoSync' in data.keys()) || data.autoSync is bool) &&
              (!('webhookKey' in data.keys()) || data.webhookKey is string) &&
              (!('lastSync' in data.keys()) || data.lastSync is timestamp) &&
-             (!('remindersEnabled' in data.keys()) || data.remindersEnabled is bool) &&
-             (!('reminderAdvanceMinutes' in data.keys()) || data.reminderAdvanceMinutes is number) &&
              data.updatedAt is timestamp;
     }
 

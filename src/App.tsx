@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, signInSimple } from './lib/firebase';
+import { auth, signUpUser, logInUser } from './lib/firebase';
 import { LogIn, LogOut, LayoutDashboard, Plus, Users, Settings, ArrowRight, Shield, Zap, Target, AlertCircle, Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import Dashboard from './components/Dashboard';
@@ -64,11 +64,12 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'pipeline' | 'performance' | 'settings'>('pipeline');
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup'>('landing');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Form states
-  const [formData, setFormData] = useState({ name: '', email: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -84,22 +85,22 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email) {
-      setAuthError("Please fill in both Name and Email.");
+    if (!formData.email || !formData.password || (authMode === 'signup' && !formData.name)) {
+      setAuthError("Please fill in all required fields.");
       return;
     }
     
     try {
       setAuthError(null);
-      await signInSimple(formData.name, formData.email);
-    } catch (error: any) {
-      if (error.code === 'auth/admin-restricted-operation') {
-        setAuthError("Registration blocked: You must enable 'Anonymous Authentication' in your Firebase Console (under Authentication > Sign-in method) for this simple login to work.");
+      if (authMode === 'signup') {
+        await signUpUser(formData.name, formData.email, formData.password);
       } else {
-        setAuthError(error.message || "An error occurred during authentication.");
+        await logInUser(formData.email, formData.password);
       }
+    } catch (error: any) {
+      setAuthError(error.message || "An error occurred during authentication.");
     }
   };
 
@@ -162,7 +163,7 @@ export default function App() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-6xl font-black text-white mb-6 leading-tight tracking-tighter"
+              className="text-5xl lg:text-6xl font-black text-white mb-6 leading-tight tracking-tighter"
             >
               Accelerate your <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-500">Pipeline.</span>
             </motion.h1>
@@ -171,12 +172,12 @@ export default function App() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-xl text-slate-400 mb-10 leading-relaxed font-medium"
+              className="text-lg text-slate-400 mb-10 leading-relaxed font-medium"
             >
               The unified orchestration layer for modern revenue teams. Predict, manage, and close with precision.
             </motion.p>
 
-            <div className="grid grid-cols-2 gap-6 mb-12">
+            <div className="hidden sm:grid grid-cols-2 gap-6 mb-12">
               <div className="flex items-start gap-3">
                 <div className="mt-1 p-1 bg-white/5 rounded-md text-emerald-400"><Target size={16} /></div>
                 <div>
@@ -199,57 +200,115 @@ export default function App() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-[#0C0C0E] border border-white/5 rounded-3xl p-10 shadow-2xl relative"
+            className="bg-[#0C0C0E] border border-white/5 rounded-3xl p-6 md:p-10 shadow-2xl relative overflow-hidden"
           >
             <div className="absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
             
-            <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
-            <p className="text-slate-500 text-sm mb-10">Access your enterprise dashboard</p>
-
-            <AnimatePresence mode="wait">
-              {authError && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3"
+            {authMode === 'landing' ? (
+              <div className="text-center md:text-left py-8 md:py-0">
+                <h2 className="text-3xl font-black text-white mb-4">Unleash the Power.</h2>
+                <p className="text-slate-500 mb-8 leading-relaxed">Join the next generation of sales professionals who dominate the market with Apex Intelligence.</p>
+                
+                <button
+                  onClick={() => setAuthMode('signup')}
+                  className="w-full flex items-center justify-center gap-3 bg-white text-[#08080A] py-4 px-6 rounded-2xl font-bold hover:bg-slate-200 transition-all duration-300 group shadow-xl shadow-white/5 active:scale-[0.98]"
                 >
-                  <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
-                  <p className="text-xs text-red-200 leading-relaxed">{authError}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <span>Get Started Now</span>
+                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={18} />
+                </button>
+                
+                <p className="mt-6 text-center text-xs font-bold text-slate-600 flex items-center justify-center gap-2">
+                  Already on Apex? 
+                  <button onClick={() => setAuthMode('login')} className="text-indigo-400 hover:text-indigo-300 transition-colors">Sign In</button>
+                </p>
+              </div>
+            ) : (
+              <div>
+                <button 
+                  onClick={() => setAuthMode('landing')}
+                  className="text-slate-500 hover:text-white transition-colors mb-6 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
+                >
+                  <ArrowRight className="rotate-180" size={14} /> Back to Start
+                </button>
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Full Name</label>
-                <input 
-                  type="text" 
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g. John Doe"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-slate-700 outline-none focus:border-indigo-500/50 transition-colors"
-                />
+                <div className="flex items-end justify-between mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                      {authMode === 'signup' ? 'Create Account' : 'Welcome Back'}
+                    </h2>
+                    <p className="text-slate-500 text-sm">
+                      {authMode === 'signup' ? 'Start your 14-day free trial' : 'Access your enterprise dashboard'}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')}
+                    className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest border-b border-indigo-400/20 pb-0.5"
+                  >
+                    {authMode === 'signup' ? 'Log In' : 'Sign Up'}
+                  </button>
+                </div>
+
+                <AnimatePresence mode="wait">
+                  {authError && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3"
+                    >
+                      <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
+                      <p className="text-xs text-red-200 leading-relaxed">{authError}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <form onSubmit={handleAuth} className="space-y-4">
+                  {authMode === 'signup' && (
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Full Name</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g. John Doe"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-slate-800 outline-none focus:border-indigo-500/50 transition-colors"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Email Address</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="name@company.com"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-slate-800 outline-none focus:border-indigo-500/50 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Secure Password</label>
+                    <input 
+                      type="password" 
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="••••••••"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-slate-800 outline-none focus:border-indigo-500/50 transition-colors"
+                    />
+                  </div>
+                  
+                  <button
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-3 bg-white text-[#08080A] py-4 px-6 rounded-2xl font-bold hover:bg-slate-200 transition-all duration-300 group shadow-xl shadow-white/5 active:scale-[0.98] mt-6"
+                  >
+                    <span>{authMode === 'signup' ? 'Create Workspace' : 'Enter Workspace'}</span>
+                    <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={18} />
+                  </button>
+                </form>
               </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Business Email</label>
-                <input 
-                  type="email" 
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="name@company.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-slate-700 outline-none focus:border-indigo-500/50 transition-colors"
-                />
-              </div>
-              
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-3 bg-white text-[#08080A] py-4 px-6 rounded-2xl font-bold hover:bg-slate-200 transition-all duration-300 group shadow-xl shadow-white/5 active:scale-[0.98] mt-6"
-              >
-                <span>Enter Workspace</span>
-                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={18} />
-              </button>
-            </form>
+            )}
 
             <div className="mt-8 pt-8 border-t border-white/5">
               <div className="flex items-center gap-4">

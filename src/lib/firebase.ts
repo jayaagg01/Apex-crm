@@ -1,5 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  updateProfile 
+} from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfigLocal from '../../firebase-applet-config.json';
 
@@ -19,15 +24,36 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
-export const signInSimple = async (name: string, email: string) => {
+export const signUpUser = async (name: string, email: string, pass: string) => {
   try {
-    const cred = await signInAnonymously(auth);
-    // Store user details in localStorage for UI use
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(cred.user, { displayName: name });
     localStorage.setItem('apex_user', JSON.stringify({ name, email, uid: cred.user.uid }));
     return cred.user;
   } catch (error: any) {
-    if (error.code === 'auth/admin-restricted-operation') {
-      console.error("Firebase Error: Anonymous Auth is disabled. Please enable it in the Firebase Console (Authentication > Sign-in method).");
+    if (error.code === 'auth/email-already-in-use') {
+      throw new Error("This email is already in use. Please log in instead.");
+    }
+    if (error.code === 'auth/weak-password') {
+      throw new Error("Password should be at least 6 characters.");
+    }
+    if (error.code === 'auth/operation-not-allowed') {
+      throw new Error("Email/Password Authentication is not enabled in Firebase Console.");
+    }
+    throw error;
+  }
+};
+
+export const logInUser = async (email: string, pass: string) => {
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    // Use displayName for name, fallback to storage if available
+    const name = cred.user.displayName || "User";
+    localStorage.setItem('apex_user', JSON.stringify({ name, email, uid: cred.user.uid }));
+    return cred.user;
+  } catch (error: any) {
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      throw new Error("Invalid email or password. Please check your credentials.");
     }
     throw error;
   }
